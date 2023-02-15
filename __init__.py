@@ -37,6 +37,7 @@ from bpy.props import IntProperty, FloatProperty, FloatVectorProperty, BoolPrope
 from gpu_extras.batch import batch_for_shader
 from .helper import *
 from .usecase import get_curve_map_locations, get_distance
+from .preferences import *
 
 # 作業用の一時モディファイアの名前
 modifier_name = '__UndoVerticesWorkingTemporaryModifier__'
@@ -47,9 +48,9 @@ class UndoVerticesPropertyGroup(bpy.types.PropertyGroup):
         ("Curve", "Curve", "Curve", "FCURVE", 2),
     ]
     lock_axiz_enums = [
-        ("X", "x", ""),
-        ("Y", "y", ""),
-        ("Z", "z", ""),
+        ("X", "X", ""),
+        ("Y", "Y", ""),
+        ("Z", "Z", ""),
     ]
 
     # 変更方法
@@ -62,14 +63,14 @@ class UndoVerticesPropertyGroup(bpy.types.PropertyGroup):
 class UndoVerticesSaveVertices():
     # 保存する頂点
     save_selected_verts = None
-    save_all_len = None
+    save_all_len = 0
 
     @classmethod
     def is_save(self):
         return True if UndoVerticesSaveVertices.save_selected_verts else False
 
     @classmethod
-    def len_save_vertices(self):
+    def get_len_save_vertices(self):
         return 0 if self.save_selected_verts is None else len(self.save_selected_verts)
 
 class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
@@ -79,7 +80,14 @@ class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
-        UndoVerticesSaveVertices.save_selected_verts = [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+        save_selected_verts = [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+
+        # 未選択の場合
+        if 1 > len(save_selected_verts):
+            show_message_error("頂点が選択されていません。")
+            return {'CANCELLED'}
+
+        UndoVerticesSaveVertices.save_selected_verts = save_selected_verts
         UndoVerticesSaveVertices.save_all_len = len(bm.verts)
         area_3d_view_tag_redraw_all()
         return{'FINISHED'}
@@ -103,7 +111,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         # ---------------------------------------
         box = layout.box()
         row = box.row(align = True)
-        row.label(text = "Lock Axis" )
+        row.label(text = "Lock Axis")
         row.scale_y = 2
         row.prop_enum(prop, "lock", "X")
         row.prop_enum(prop, "lock", "Y")
@@ -133,10 +141,10 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         bm = bmesh.from_edit_mesh(me)
         bm.verts.ensure_lookup_table()
 
-        # 頂点数の減っているがあった場合はキャンセルする
+        # 頂点数の減っている場合はキャンセルする
         if len(bm.verts) != UndoVerticesSaveVertices.save_all_len:
-            show_message_error("頂点の数を増減すると、元に戻すことはできません。")
-            return{'CANCELLED'}
+            show_message_error("頂点数が増減した場合、元に戻すことはできません。")
+            return {'CANCELLED'}
 
         # カーブによる編集時のみ
         if prop.method == "Curve":
@@ -155,7 +163,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
             distance = get_distance(UndoVerticesSaveVertices.save_selected_verts, bm)
 
             # UI_カーブマッピングをベジェに変換する
-            bezier_y = create_bezier_curve(UndoVerticesSaveVertices.len_save_vertices(), locations[0], locations[1])
+            bezier_y = create_bezier_curve(UndoVerticesSaveVertices.get_len_save_vertices(), locations[0], locations[1])
             total = len(bezier_y)
             for v in UndoVerticesSaveVertices.save_selected_verts:
                 save_co = v[0]
@@ -286,17 +294,22 @@ class UndoVerticesPanel(bpy.types.Panel):
         layout = self.layout
         box = layout.box()
         box.label(text = 'Save and Undo vertices')
-        box = box.row()
-        box.scale_y = 2
-        col = box.column()
-        col.operator(UndoVerticesSaveVerticesOperator.bl_idname, text = "Save" , text_ctxt = "Save", depress = UndoVerticesSaveVertices.is_save())
-        col = box.column()
+        row = box.row()
+        row.scale_y = 2
+        col = row.column()
+        col.operator(UndoVerticesSaveVerticesOperator.bl_idname, text = "Save" , text_ctxt = "Save")
+        col = row.column()
 
         if UndoVerticesSaveVertices.is_save() == False:
             col.enabled = False
         elif len(bm.verts) != UndoVerticesSaveVertices.save_all_len:
             col.alert = True
         col.operator(UndoVerticesUndoVerticesOperator.bl_idname, text = "Undo" , text_ctxt = "Undo")
+
+        if UndoVerticesSaveVertices.is_save() == False:
+            box.label(text = 'not saved')
+        else:
+            box.label(text = 'saved vertices : ' + str(UndoVerticesSaveVertices.get_len_save_vertices()))
 
         layout.separator()
         box = layout.box()
@@ -314,10 +327,14 @@ classes = (
     UndoVerticesSaveVerticesOperator,
     UndoVerticesUndoVerticesOperator,
     UndoVerticesViewVerticesOperator,
+    UndoVerticesPreferences,
+    UndoVerticesUpdaterPanel,
     )
 
 def register():
+    addon_updater_ops.register(bl_info)
     for cls in classes:
+        addon_updater_ops.make_annotations(cls)  # Avoid blender 2.8 warnings.
         bpy.utils.register_class(cls)
     bpy.types.Scene.undo_vertices_prop = bpy.props.PointerProperty(type = UndoVerticesPropertyGroup)
 
@@ -325,6 +342,8 @@ def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
     del bpy.types.Scene.undo_vertices_prop
+
+    addon_updater_ops.unregister()
 
 if __name__ == "__main__":
     register()

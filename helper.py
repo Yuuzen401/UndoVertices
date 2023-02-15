@@ -64,13 +64,14 @@ def distance_3d(x1, y1, z1, x2, y2, z2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
 
 def create_bezier_curve(segment, x_data = [0, 1], y_data = [0 , 1]):
-    # ポイントが100あるベジェ曲線を作成する
+    """2Dのベジェ曲線を作る
+    """
     t = np.linspace(0, 1, len(x_data))
-    t_fit = np.linspace(0, 1, segment + 100)
+    t_fit = np.linspace(0, 1, segment + 10)
     # x_fit = np.interp(t_fit, t, x_data)
     y_fit = np.interp(t_fit, t, y_data)
 
-    # 本処理ではy座標だけ欲しいのコメントアウトしてy座標を取得する
+    # 本処理ではy座標だけ欲しいのでコメントアウトしてy座標を取得する
     return y_fit
 
     # vector = np.array([x_fit, y_fit])
