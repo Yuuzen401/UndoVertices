@@ -31,6 +31,7 @@ import bmesh
 import mathutils
 import math
 import numpy as np
+import time
 
 from pprint import pprint
 from bpy.props import IntProperty, FloatProperty, FloatVectorProperty, BoolProperty, PointerProperty, EnumProperty
@@ -38,6 +39,7 @@ from gpu_extras.batch import batch_for_shader
 from .helper import *
 from .usecase import get_curve_map_locations, get_distance
 from .preferences import *
+from .exception import *
 
 # 作業用の一時モディファイアの名前
 modifier_name = '__UndoVerticesWorkingTemporaryModifier__'
@@ -73,6 +75,28 @@ class UndoVerticesSaveVertices():
     def get_len_save_vertices(self):
         return 0 if self.save_selected_verts is None else len(self.save_selected_verts)
 
+    @classmethod
+    def get_selected_verts(self, bm):
+        return [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+
+    @classmethod
+    def rollback_save(self):
+        """セーブの状態に戻す
+        """
+        obj = bpy.context.active_object
+        me = obj.data
+        bm = bmesh.from_edit_mesh(me)
+        bm.verts.ensure_lookup_table()
+        for v in UndoVerticesSaveVertices.save_selected_verts:
+            save_co = v[0]
+            index = v[2]
+            bm.verts[index].co.x = save_co[0]
+            bm.verts[index].co.y = save_co[1]
+            bm.verts[index].co.z = save_co[2]
+        bmesh.update_edit_mesh(me)
+        bpy.ops.object.editmode_toggle()
+        bpy.ops.object.mode_set(mode = 'EDIT')
+
 class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
     bl_idname = "save_verts.operator"
     bl_label = "Undo Vertices Save Vertices"
@@ -80,7 +104,7 @@ class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
     def execute(self, context):
         obj = bpy.context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
-        save_selected_verts = [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+        save_selected_verts = UndoVerticesSaveVertices.get_selected_verts(bm)
 
         # 未選択の場合
         if 1 > len(save_selected_verts):
@@ -139,6 +163,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         obj = bpy.context.active_object
         me = obj.data
         bm = bmesh.from_edit_mesh(me)
+        bm_back_up = bm.copy()
         bm.verts.ensure_lookup_table()
 
         # 頂点数の減っている場合はキャンセルする
@@ -146,52 +171,67 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
             show_message_error("頂点数が増減した場合、元に戻すことはできません。")
             return {'CANCELLED'}
 
-        # カーブによる編集時のみ
-        if prop.method == "Curve":
-            # 制御用のワープモディファイアを編集時のみ追加
-            if obj.modifiers.find(modifier_name) < 0:
-                bpy.ops.object.modifier_add(type = 'WARP')
-                mod = obj.modifiers[-1]
-                mod.name = modifier_name
-                mod.falloff_type = 'CURVE'
-                mod.falloff_curve.use_clip = True
+        # 頂点数が多すぎる場合は負荷が高いため、タイムアウトによるエラーを検知できるようにする
+        start_time = time.time()
+        try:
+            # カーブによる編集時のみ
+            if prop.method == "Curve":
+                # 制御用のワープモディファイアを編集時のみ追加
+                if obj.modifiers.find(modifier_name) < 0:
+                    bpy.ops.object.modifier_add(type = 'WARP')
+                    mod = obj.modifiers[-1]
+                    mod.name = modifier_name
+                    mod.falloff_type = 'CURVE'
+                    mod.falloff_curve.use_clip = True
 
-            # drawで実行したマップからカーブの座標を取得する
-            locations = get_curve_map_locations(obj.modifiers[modifier_name])
+                # drawで実行したマップからカーブの座標を取得する
+                locations = get_curve_map_locations(obj.modifiers[modifier_name])
 
-            # 変更前と変更後の距離を取得する
-            distance = get_distance(UndoVerticesSaveVertices.save_selected_verts, bm)
+                # 変更前と変更後の距離を取得する
+                distance = get_distance(UndoVerticesSaveVertices.save_selected_verts, bm)
 
-            # UI_カーブマッピングをベジェに変換する
-            bezier_y = create_bezier_curve(UndoVerticesSaveVertices.get_len_save_vertices(), locations[0], locations[1])
-            total = len(bezier_y)
-            for v in UndoVerticesSaveVertices.save_selected_verts:
-                save_co = v[0]
-                index = v[2]
-                now_co = bm.verts[index].co
+                # UI_カーブマッピングをベジェに変換する
+                bezier_y = create_bezier_curve(UndoVerticesSaveVertices.get_len_save_vertices(), locations[0], locations[1])
+                total = len(bezier_y)
+                for v in UndoVerticesSaveVertices.save_selected_verts:
+                    save_co = v[0]
+                    index = v[2]
+                    now_co = bm.verts[index].co
 
-                for d in distance:
-                    if index == d[1]:
-                        pos = d[0]
-                        break
+                    for d in distance:
+                        if index == d[1]:
+                            pos = d[0]
+                            break
+    
+                    pos = int(total * pos) - 1
+                    calc_rate = bezier_y[pos]
 
-                pos = int(total * pos) - 1
-                param = bezier_y[pos]
+                    calc_co = get_coord_calc_two_point(save_co, now_co, calc_rate)
+                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
+                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
+                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+                    show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
-                calc_co = get_coord_calc_two_point(save_co, now_co, param)
-                bm.verts[v[2]].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
-                bm.verts[v[2]].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
-                bm.verts[v[2]].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+            elif prop.method == "Constant":
+                for v in UndoVerticesSaveVertices.save_selected_verts:
+                    save_co = v[0]
+                    index = v[2]
+                    now_co = bm.verts[index].co
+                    calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
+                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
+                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
+                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+                    show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
-        elif prop.method == "Constant":
-            for v in UndoVerticesSaveVertices.save_selected_verts:
-                save_co = v[0]
-                index = v[2]
-                now_co = bm.verts[index].co
-                calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
-                bm.verts[v[2]].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
-                bm.verts[v[2]].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
-                bm.verts[v[2]].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+        # タイムアウト例外
+        except TimeoutErrorException as e:
+            print(e)
+            # bmesh.update_edit_meshが実行されていないのに内部的には変形しているので処理前に戻す
+            bm = bm_back_up
+            # 強制的に変更率が0の状態に戻す
+            prop.method = "Constant"
+            prop.constant_rate = 0
+            return {'CANCELLED'}
 
         bmesh.update_edit_mesh(me)
         bpy.ops.object.editmode_toggle()

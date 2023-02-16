@@ -14,6 +14,8 @@
 import bpy
 import math
 import numpy as np
+import time
+from .exception import *
 
 def is_mesh_edit(obj):
     return obj and obj.mode == 'EDIT' and obj.type == 'MESH'
@@ -47,6 +49,18 @@ def show_message_error(message):
     def draw(self, context):
         self.layout.label(text = message)
     bpy.context.window_manager.popup_menu(draw, title = 'Error', icon = 'ERROR')
+
+def is_timeout(start_time, error_sec):
+    """タイムアウトを判断する
+    """
+    return time.time() - start_time > error_sec
+
+def show_message_error_for_timeout(start_time, error_sec, message):
+    """タイムアウトエラーによるメッセージを出力する
+    """
+    if is_timeout(start_time, error_sec):
+        show_message_error(message)
+        raise TimeoutErrorException(message)
 
 def get_coord_calc_two_point(p1, p2, progress):
     """始点と終点からの進んだ割合を与えた場合の座標を取得する
