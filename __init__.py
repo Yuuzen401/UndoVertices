@@ -40,6 +40,7 @@ from .helper import *
 from .usecase import get_curve_map_locations, get_distance
 from .preferences import *
 from .exception import *
+from .mesh_helpers import *
 
 # 作業用の一時モディファイアの名前
 modifier_name = '__UndoVerticesWorkingTemporaryModifier__'
@@ -65,6 +66,7 @@ class UndoVerticesPropertyGroup(bpy.types.PropertyGroup):
 class UndoVerticesSaveVertices():
     # 保存する頂点
     save_selected_verts = None
+    save_selected_coords = []
     save_all_len = 0
 
     @classmethod
@@ -76,26 +78,17 @@ class UndoVerticesSaveVertices():
         return 0 if self.save_selected_verts is None else len(self.save_selected_verts)
 
     @classmethod
-    def get_selected_verts(self, bm):
-        return [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+    def set_selected_verts(self, bm):
+        self.save_selected_verts = [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
 
     @classmethod
-    def rollback_save(self):
-        """セーブの状態に戻す
-        """
-        obj = bpy.context.active_object
-        me = obj.data
-        bm = bmesh.from_edit_mesh(me)
-        bm.verts.ensure_lookup_table()
-        for v in UndoVerticesSaveVertices.save_selected_verts:
-            save_co = v[0]
-            index = v[2]
-            bm.verts[index].co.x = save_co[0]
-            bm.verts[index].co.y = save_co[1]
-            bm.verts[index].co.z = save_co[2]
-        bmesh.update_edit_mesh(me)
-        bpy.ops.object.editmode_toggle()
-        bpy.ops.object.mode_set(mode = 'EDIT')
+    def set_selected_coords(self, bm, obj):
+        self.save_selected_coords = []
+        verts_co = [v.co.copy() for v in bm.verts if v.select]
+        for v_co in verts_co:
+            v_co = obj.matrix_world @ v_co
+            self.save_selected_coords.append(v_co + obj.location)
+        
 
 class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
     bl_idname = "save_verts.operator"
@@ -103,16 +96,18 @@ class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
 
     def execute(self, context):
         obj = bpy.context.active_object
-        bm = bmesh.from_edit_mesh(obj.data)
-        save_selected_verts = UndoVerticesSaveVertices.get_selected_verts(bm)
+        bm = bmesh_from_object(obj)
+        UndoVerticesSaveVertices.set_selected_verts(bm)
 
         # 未選択の場合
-        if 1 > len(save_selected_verts):
+        if 1 > UndoVerticesSaveVertices.get_len_save_vertices():
+            UndoVerticesSaveVertices.save_selected_verts = None
             show_message_error("頂点が選択されていません。")
             return {'CANCELLED'}
 
-        UndoVerticesSaveVertices.save_selected_verts = save_selected_verts
+        UndoVerticesSaveVertices.set_selected_coords(bm, obj)
         UndoVerticesSaveVertices.save_all_len = len(bm.verts)
+
         area_3d_view_tag_redraw_all()
         return{'FINISHED'}
 
@@ -162,8 +157,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         prop = context.scene.undo_vertices_prop
         obj = bpy.context.active_object
         me = obj.data
-        bm = bmesh.from_edit_mesh(me)
-        bm_back_up = bm.copy()
+        bm = bmesh_from_object(obj)
         bm.verts.ensure_lookup_table()
 
         # 頂点数の減っている場合はキャンセルする
@@ -226,8 +220,6 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         # タイムアウト例外
         except TimeoutErrorException as e:
             print(e)
-            # bmesh.update_edit_meshが実行されていないのに内部的には変形しているので処理前に戻す
-            bm = bm_back_up
             # 強制的に変更率が0の状態に戻す
             prop.method = "Constant"
             prop.constant_rate = 0
@@ -246,6 +238,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
     def invoke(self, context, event):
         prop = context.scene.undo_vertices_prop
         if event:
+            prop.method = "Constant"
             prop.constant_rate = 0
        
         return self.execute(context)
@@ -279,21 +272,16 @@ class UndoVerticesViewVerticesOperator(bpy.types.Operator):
 
     @classmethod
     def __draw(self, context):
-        prop = context.scene.undo_vertices_prop
-        obj = bpy.context.active_object
-        if UndoVerticesSaveVertices.save_selected_verts is None:
+        if not UndoVerticesSaveVertices.save_selected_coords:
             return
 
-        coords = []
-        for v in UndoVerticesSaveVertices.save_selected_verts:
-            coords.append(v[0] + obj.location)
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glLineWidth(3)
 
         shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         shader.bind()
         shader.uniform_float("color", (0, 1, 1, 1))
-        batch = batch_for_shader(shader, 'POINTS', {"pos": coords})
+        batch = batch_for_shader(shader, 'POINTS', {"pos": UndoVerticesSaveVertices.save_selected_coords})
         batch.draw(shader)
 
         bgl.glDisable(bgl.GL_BLEND)
@@ -325,6 +313,7 @@ class UndoVerticesPanel(bpy.types.Panel):
         if context.mode == 'EDIT_MESH':
             return True
         else:
+            UndoVerticesSaveVertices.save_selected_coords = []
             UndoVerticesSaveVertices.save_selected_verts = None
             return False  
 
