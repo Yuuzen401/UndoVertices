@@ -63,7 +63,7 @@ class UndoVerticesPropertyGroup(bpy.types.PropertyGroup):
     # 軸の固定
     lock : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options={'ENUM_FLAG'})
 
-class UndoVerticesSaveVertices():
+class UndoVertices():
     # 保存する頂点
     save_selected_verts = None
     save_selected_coords = []
@@ -71,7 +71,7 @@ class UndoVerticesSaveVertices():
 
     @classmethod
     def is_save(self):
-        return True if UndoVerticesSaveVertices.save_selected_verts else False
+        return True if UndoVertices.save_selected_verts else False
 
     @classmethod
     def get_len_save_vertices(self):
@@ -90,28 +90,28 @@ class UndoVerticesSaveVertices():
             self.save_selected_coords.append(v_co + obj.location)
         
 
-class UndoVerticesSaveVerticesOperator(bpy.types.Operator):
+class UndoVerticesSaveOperator(bpy.types.Operator):
     bl_idname = "save_verts.operator"
     bl_label = "Undo Vertices Save Vertices"
 
     def execute(self, context):
         obj = bpy.context.active_object
         bm = bmesh_from_object(obj)
-        UndoVerticesSaveVertices.set_selected_verts(bm)
+        UndoVertices.set_selected_verts(bm)
 
         # 未選択の場合
-        if 1 > UndoVerticesSaveVertices.get_len_save_vertices():
-            UndoVerticesSaveVertices.save_selected_verts = None
+        if 1 > UndoVertices.get_len_save_vertices():
+            UndoVertices.save_selected_verts = None
             show_message_error("頂点が選択されていません。")
             return {'CANCELLED'}
 
-        UndoVerticesSaveVertices.set_selected_coords(bm, obj)
-        UndoVerticesSaveVertices.save_all_len = len(bm.verts)
+        UndoVertices.set_selected_coords(bm, obj)
+        UndoVertices.save_all_len = len(bm.verts)
 
         area_3d_view_tag_redraw_all()
         return{'FINISHED'}
 
-class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
+class UndoVerticesOperator(bpy.types.Operator):
     bl_idname = "undo_verts.operator"
     bl_label = "Undo Vertices Control"
     bl_options = {'REGISTER', 'UNDO'}
@@ -121,7 +121,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
 
     @classmethod
     def is_save(self):
-        return True if UndoVerticesSaveVertices.save_selected_verts else False
+        return True if UndoVertices.save_selected_verts else False
 
     def draw(self, context):
         prop = context.scene.undo_vertices_prop
@@ -161,7 +161,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         bm.verts.ensure_lookup_table()
 
         # 頂点数の減っている場合はキャンセルする
-        if len(bm.verts) != UndoVerticesSaveVertices.save_all_len:
+        if len(bm.verts) != UndoVertices.save_all_len:
             show_message_error("頂点数が増減した場合、元に戻すことはできません。")
             return {'CANCELLED'}
 
@@ -182,12 +182,12 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
                 locations = get_curve_map_locations(obj.modifiers[modifier_name])
 
                 # 変更前と変更後の距離を取得する
-                distance = get_distance(UndoVerticesSaveVertices.save_selected_verts, bm)
+                distance = get_distance(UndoVertices.save_selected_verts, bm)
 
                 # UI_カーブマッピングをベジェに変換する
-                bezier_y = create_bezier_curve(UndoVerticesSaveVertices.get_len_save_vertices(), locations[0], locations[1])
+                bezier_y = create_bezier_curve(UndoVertices.get_len_save_vertices(), locations[0], locations[1])
                 total = len(bezier_y)
-                for v in UndoVerticesSaveVertices.save_selected_verts:
+                for v in UndoVertices.save_selected_verts:
                     save_co = v[0]
                     index = v[2]
                     now_co = bm.verts[index].co
@@ -207,7 +207,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
             elif prop.method == "Constant":
-                for v in UndoVerticesSaveVertices.save_selected_verts:
+                for v in UndoVertices.save_selected_verts:
                     save_co = v[0]
                     index = v[2]
                     now_co = bm.verts[index].co
@@ -230,7 +230,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
         bpy.ops.object.mode_set(mode = 'EDIT')
 
         # 描画中なら全エリアを再描画（アクティブな画面以外も再描画する）
-        if UndoVerticesViewVerticesOperator.is_enable():
+        if UndoVerticesViewOperator.is_enable():
             area_3d_view_tag_redraw_all()
 
         return{'FINISHED'}
@@ -243,7 +243,7 @@ class UndoVerticesUndoVerticesOperator(bpy.types.Operator):
        
         return self.execute(context)
 
-class UndoVerticesViewVerticesOperator(bpy.types.Operator):
+class UndoVerticesViewOperator(bpy.types.Operator):
     bl_idname = "view_verts.operator"
     bl_label = "Undo Vertices Save Vertices"
 
@@ -272,7 +272,7 @@ class UndoVerticesViewVerticesOperator(bpy.types.Operator):
 
     @classmethod
     def __draw(self, context):
-        if not UndoVerticesSaveVertices.save_selected_coords:
+        if not UndoVertices.save_selected_coords:
             return
 
         bgl.glEnable(bgl.GL_BLEND)
@@ -281,7 +281,7 @@ class UndoVerticesViewVerticesOperator(bpy.types.Operator):
         shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
         shader.bind()
         shader.uniform_float("color", (0, 1, 1, 1))
-        batch = batch_for_shader(shader, 'POINTS', {"pos": UndoVerticesSaveVertices.save_selected_coords})
+        batch = batch_for_shader(shader, 'POINTS', {"pos": UndoVertices.save_selected_coords})
         batch.draw(shader)
 
         bgl.glDisable(bgl.GL_BLEND)
@@ -313,8 +313,8 @@ class UndoVerticesPanel(bpy.types.Panel):
         if context.mode == 'EDIT_MESH':
             return True
         else:
-            UndoVerticesSaveVertices.save_selected_coords = []
-            UndoVerticesSaveVertices.save_selected_verts = None
+            UndoVertices.save_selected_coords = []
+            UndoVertices.save_selected_verts = None
             return False  
 
     def draw(self, context):
@@ -326,36 +326,36 @@ class UndoVerticesPanel(bpy.types.Panel):
         row = box.row()
         row.scale_y = 2
         col = row.column()
-        col.operator(UndoVerticesSaveVerticesOperator.bl_idname, text = "Save" , text_ctxt = "Save")
+        col.operator(UndoVerticesSaveOperator.bl_idname, text = "Save" , text_ctxt = "Save")
         col = row.column()
 
-        if UndoVerticesSaveVertices.is_save() == False:
+        if UndoVertices.is_save() == False:
             col.enabled = False
-        elif len(bm.verts) != UndoVerticesSaveVertices.save_all_len:
+        elif len(bm.verts) != UndoVertices.save_all_len:
             col.alert = True
-        col.operator(UndoVerticesUndoVerticesOperator.bl_idname, text = "Undo" , text_ctxt = "Undo")
+        col.operator(UndoVerticesOperator.bl_idname, text = "Undo" , text_ctxt = "Undo")
 
-        if UndoVerticesSaveVertices.is_save() == False:
+        if UndoVertices.is_save() == False:
             box.label(text = 'not saved')
         else:
-            box.label(text = 'saved vertices : ' + str(UndoVerticesSaveVertices.get_len_save_vertices()))
+            box.label(text = 'saved vertices : ' + str(UndoVertices.get_len_save_vertices()))
 
         layout.separator()
         box = layout.box()
         box.label(text = 'View saved vertices')
         col = box.column()
         col.scale_y = 2
-        if UndoVerticesViewVerticesOperator.is_enable():
-            col.operator(UndoVerticesViewVerticesOperator.bl_idname, text = "View", depress = True,  icon = "PAUSE") 
+        if UndoVerticesViewOperator.is_enable():
+            col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = True,  icon = "PAUSE") 
         else:
-            col.operator(UndoVerticesViewVerticesOperator.bl_idname, text = "View", depress = False, icon = "PLAY")
+            col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = False, icon = "PLAY")
 
 classes = (
     UndoVerticesPropertyGroup,
     UndoVerticesPanel,
-    UndoVerticesSaveVerticesOperator,
-    UndoVerticesUndoVerticesOperator,
-    UndoVerticesViewVerticesOperator,
+    UndoVerticesSaveOperator,
+    UndoVerticesOperator,
+    UndoVerticesViewOperator,
     UndoVerticesPreferences,
     UndoVerticesUpdaterPanel,
     )
