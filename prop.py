@@ -25,10 +25,19 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
         ("Y", "Y", ""),
         ("Z", "Z", ""),
     ]
+    select_enums = [
+        ("SELECT_SET", "", "SELECT_SET", "SELECT_SET", 1),
+        ("SELECT_EXTEND", "", "SELECT_EXTEND", "SELECT_EXTEND", 2),
+        ("SELECT_SUBTRACT", "", "SELECT_SUBTRACT", "SELECT_SUBTRACT", 3),
+        ("SELECT_DIFFERENCE", "", "SSELECT_DIFFERENCE", "SELECT_DIFFERENCE", 4),
+        #("SELECT_INTERSECT", "", "SELECT_INTERSECT", "SELECT_INTERSECT", 5),  # 直接選択と違いが無いので不要
+    ]
 
     # 変更方法
     method : EnumProperty(items = method_enums, name = "Method", default = "Constant")
     # 一定の変更率
     constant_rate : IntProperty(name = "Constant Rate", default = 0, min = 0, max = 100)
     # 軸の固定
-    lock : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options={'ENUM_FLAG'})
+    lock_axiz : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options={'ENUM_FLAG'})
+    # 選択
+    select : EnumProperty(items = select_enums, name = "Select", default = "SELECT_SET")

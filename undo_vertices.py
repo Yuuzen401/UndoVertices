@@ -11,6 +11,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from .mesh_helpers import *
+
 class UndoVertices():
     # 保存する頂点
     save_selected_verts = None
@@ -22,7 +24,7 @@ class UndoVertices():
         return True if UndoVertices.save_selected_verts else False
 
     @classmethod
-    def get_len_save_vertices(self):
+    def get_len_save_verts(self):
         return 0 if self.save_selected_verts is None else len(self.save_selected_verts)
 
     @classmethod
@@ -36,3 +38,42 @@ class UndoVertices():
         for v_co in verts_co:
             v_co = obj.matrix_world @ v_co
             self.save_selected_coords.append(v_co + obj.location)
+
+    @classmethod
+    def select_save_verts(self, context, obj):
+        prop = context.scene.undo_vertices_prop
+        bm = bmesh_from_object(obj)
+        bm.select_flush(True)
+        bm.verts.ensure_lookup_table()
+
+        # 保存した頂点のみ選択する
+        if prop.select == "SELECT_SET":
+            for v in bm.verts:
+                v.select = False
+            for v in self.save_selected_verts:
+                index = v[2]
+                bm.verts[index].select = True
+
+        # 保存した頂点を追加選択する
+        elif prop.select == "SELECT_EXTEND":
+            for v in self.save_selected_verts:
+                index = v[2]
+                bm.verts[index].select = True
+
+        # 何故かIndexを指定してTrueはできるのにFalseができない謎現象が起きるのでコメントアウト
+
+        # 保存した頂点を対象に選択を解除する
+        elif prop.select == "SELECT_SUBTRACT":
+            for v in self.save_selected_verts:
+                index = v[2]
+                bm.verts[index].select = False
+
+        # # 保存済の頂点を対象に選択状態を反転する
+        elif prop.select == "SELECT_DIFFERENCE":
+            for v in self.save_selected_verts:
+                index = v[2]
+                # 選択したものに対して選択状態を反転する
+                bm.verts[index].select = bm.verts[index].select != True
+            
+        bm.select_flush_mode()
+        bmesh.update_edit_mesh(obj.data)

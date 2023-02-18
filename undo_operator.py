@@ -43,9 +43,10 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
         row = box.row(align = True)
         row.label(text = "Lock Axis")
         row.scale_y = 2
-        row.prop_enum(prop, "lock", "X")
-        row.prop_enum(prop, "lock", "Y")
-        row.prop_enum(prop, "lock", "Z")
+        row.prop_enum(prop, "lock_axiz", "X")
+        row.prop_enum(prop, "lock_axiz", "Y")
+        row.prop_enum(prop, "lock_axiz", "Z")
+
         # ---------------------------------------
         layout.separator()
         box = layout.box()
@@ -96,7 +97,7 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                 distance = get_distance(UndoVertices.save_selected_verts, bm)
 
                 # UI_カーブマッピングをベジェに変換する
-                bezier_y = create_bezier_curve(UndoVertices.get_len_save_vertices(), locations[0], locations[1])
+                bezier_y = create_bezier_curve(UndoVertices.get_len_save_verts(), locations[0], locations[1])
                 total = len(bezier_y)
                 for v in UndoVertices.save_selected_verts:
                     save_co = v[0]
@@ -112,9 +113,9 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                     calc_rate = bezier_y[pos]
 
                     calc_co = get_coord_calc_two_point(save_co, now_co, calc_rate)
-                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
-                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
-                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
+                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
+                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
             elif prop.method == "Constant":
@@ -123,9 +124,9 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                     index = v[2]
                     now_co = bm.verts[index].co
                     calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
-                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock else calc_co[0]
-                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock else calc_co[1]
-                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock else calc_co[2]
+                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
+                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
+                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
         # タイムアウト例外

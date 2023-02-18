@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 2),
+    "version": (0, 0, 3),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -41,7 +41,7 @@ from .prop import UndoVerticesPropertyGroup
 
 class UndoVerticesSaveOperator(Operator, UndoVertices):
     bl_idname = "save_verts.operator"
-    bl_label = "Undo Vertices Save Vertices"
+    bl_label = "Save vertices"
 
     def execute(self, context):
         obj = bpy.context.active_object
@@ -49,7 +49,7 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
         UndoVertices.set_selected_verts(bm)
 
         # 未選択の場合
-        if 1 > UndoVertices.get_len_save_vertices():
+        if 1 > UndoVertices.get_len_save_verts():
             UndoVertices.save_selected_verts = None
             show_message_error("頂点が選択されていません。")
             return {'CANCELLED'}
@@ -58,6 +58,14 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
         UndoVertices.save_all_len = len(bm.verts)
 
         area_3d_view_tag_redraw_all()
+        return{'FINISHED'}
+
+class UndoVerticesSelectOperator(Operator, UndoVertices):
+    bl_idname = "select_verts.operator"
+    bl_label = "Save vertices select"
+
+    def execute(self, context):
+        UndoVertices.select_save_verts(context, bpy.context.active_object)
         return{'FINISHED'}
 
 class UndoVerticesPanel(Panel, UndoVertices):
@@ -79,6 +87,8 @@ class UndoVerticesPanel(Panel, UndoVertices):
         prop = context.scene.undo_vertices_prop
         bm = bmesh.from_edit_mesh(bpy.context.active_object.data)
         layout = self.layout
+
+        # Save
         box = layout.box()
         box.label(text = 'Save and Undo vertices')
         row = box.row()
@@ -87,6 +97,7 @@ class UndoVerticesPanel(Panel, UndoVertices):
         col.operator(UndoVerticesSaveOperator.bl_idname, text = "Save" , text_ctxt = "Save")
         col = row.column()
 
+        # Undo
         if UndoVertices.is_save() == False:
             col.enabled = False
         elif len(bm.verts) != UndoVertices.save_all_len:
@@ -96,8 +107,26 @@ class UndoVerticesPanel(Panel, UndoVertices):
         if UndoVertices.is_save() == False:
             box.label(text = 'not saved')
         else:
-            box.label(text = 'saved vertices : ' + str(UndoVertices.get_len_save_vertices()))
+            box.label(text = 'saved vertices : ' + str(UndoVertices.get_len_save_verts()))
 
+        # Select
+        layout.separator()
+        box = layout.box()
+        box.label(text = 'Select saved vertices')
+
+        row = box.row(align = True)
+        row.prop_enum(prop, "select", "SELECT_SET")
+        row.prop_enum(prop, "select", "SELECT_EXTEND")
+        row.prop_enum(prop, "select", "SELECT_SUBTRACT")
+        row.prop_enum(prop, "select", "SELECT_DIFFERENCE")
+
+        col = box.column()
+        col.scale_y = 2
+        col.operator(UndoVerticesSelectOperator.bl_idname, text = "Save To Select ") 
+        if UndoVertices.is_save() == False:
+            col.enabled = False
+
+        # View
         layout.separator()
         box = layout.box()
         box.label(text = 'View saved vertices')
@@ -112,6 +141,7 @@ classes = (
     UndoVerticesPropertyGroup,
     UndoVerticesPanel,
     UndoVerticesSaveOperator,
+    UndoVerticesSelectOperator,
     # UndoVerticesUndoOperator,
     # UndoVerticesViewOperator,
     UndoVerticesPreferences,
