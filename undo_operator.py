@@ -63,7 +63,7 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
         elif prop.method == "Curve":
             obj = context.active_object
             mod = obj.modifiers[modifier_name]
-            layout .template_curve_mapping(mod, 'falloff_curve')
+            layout.template_curve_mapping(mod, 'falloff_curve')
 
     def execute(self, context):
         prop = context.scene.undo_vertices_prop
@@ -72,8 +72,8 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
         bm = bmesh_from_object(obj)
         bm.verts.ensure_lookup_table()
 
-        # 頂点数の減っている場合はキャンセルする
-        if len(bm.verts) != UndoVertices.save_all_len:
+        # 頂点数が減っている場合はキャンセルする
+        if UndoVertices.is_len_diff() == False:
             show_message_error("頂点数が増減した場合、元に戻すことはできません。")
             return {'CANCELLED'}
 

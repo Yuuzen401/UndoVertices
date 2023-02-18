@@ -40,6 +40,11 @@ class UndoVertices():
             self.save_selected_coords.append(v_co + obj.location)
 
     @classmethod
+    def is_len_diff(self):
+        bm = bmesh_from_object(bpy.context.active_object)
+        return self.save_all_len == len(bm.verts)
+
+    @classmethod
     def select_save_verts(self, context, obj):
         prop = context.scene.undo_vertices_prop
         bm = bmesh_from_object(obj)

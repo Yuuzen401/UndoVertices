@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 3),
+    "version": (0, 0, 4),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -65,6 +65,10 @@ class UndoVerticesSelectOperator(Operator, UndoVertices):
     bl_label = "Save vertices select"
 
     def execute(self, context):
+        # 頂点数が減っている場合はキャンセルする
+        if UndoVertices.is_len_diff() == False:
+            show_message_error("頂点数が増減した場合、選択できません。")
+            return {'CANCELLED'}
         UndoVertices.select_save_verts(context, bpy.context.active_object)
         return{'FINISHED'}
 
@@ -122,9 +126,11 @@ class UndoVerticesPanel(Panel, UndoVertices):
 
         col = box.column()
         col.scale_y = 2
-        col.operator(UndoVerticesSelectOperator.bl_idname, text = "Save To Select ") 
         if UndoVertices.is_save() == False:
             col.enabled = False
+        elif UndoVertices.is_len_diff() == False:
+            col.alert = True
+        col.operator(UndoVerticesSelectOperator.bl_idname, text = "Save To Select ") 
 
         # View
         layout.separator()
