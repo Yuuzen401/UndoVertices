@@ -60,8 +60,6 @@ class UndoVertices():
                 index = v[2]
                 bm.verts[index].select = True
 
-        # 何故かIndexを指定してTrueはできるのにFalseができない謎現象が起きるのでコメントアウト
-
         # 保存した頂点を対象に選択を解除する
         elif prop.select == "SELECT_SUBTRACT":
             for v in self.save_selected_verts:
