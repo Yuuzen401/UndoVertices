@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 7),
+    "version": (0, 0, 8),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",

@@ -46,7 +46,7 @@ class UndoVertices():
         verts_co = [v.co.copy() for v in bm.verts if v.select]
         for v_co in verts_co:
             v_co = obj.matrix_world @ v_co
-            self.save_selected_coords.append(v_co + obj.location)
+            self.save_selected_coords.append(v_co)
 
     @classmethod
     def is_len_diff(self):
