@@ -14,6 +14,7 @@
 import bpy
 import gpu
 import bgl
+import bmesh
 from gpu_extras.batch import batch_for_shader
 from bpy.types import Operator
 from .undo_vertices import UndoVertices
@@ -34,17 +35,17 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
 
     @classmethod
     def force_disable(self):
-        bpy.types.SpaceView3D.draw_handler_remove(self.draw_handler, 'WINDOW')
+        bpy.types.SpaceView3D.draw_handler_remove(self.draw_handler, "WINDOW")
         self.draw_handler = None
         area_3d_view_tag_redraw_all()
 
     @classmethod
     def __handle_add(self, context):
-        self.draw_handler = bpy.types.SpaceView3D.draw_handler_add(self.__draw, (context, ), 'WINDOW', 'POST_VIEW')
+        self.draw_handler = bpy.types.SpaceView3D.draw_handler_add(self.__draw, (context, ), "WINDOW", "POST_VIEW")
 
     @classmethod
     def __handle_remove(self, context):
-        bpy.types.SpaceView3D.draw_handler_remove(self.draw_handler, 'WINDOW')
+        bpy.types.SpaceView3D.draw_handler_remove(self.draw_handler, "WINDOW")
         self.draw_handler = None
 
     @classmethod
@@ -55,16 +56,26 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
         bgl.glEnable(bgl.GL_BLEND)
         bgl.glLineWidth(3)
 
-        shader = gpu.shader.from_builtin('3D_UNIFORM_COLOR')
+        shader = gpu.shader.from_builtin("3D_UNIFORM_COLOR")
         shader.bind()
         shader.uniform_float("color", (0, 1, 1, 1))
-        batch = batch_for_shader(shader, 'POINTS', {"pos": UndoVertices.save_selected_coords})
+        batch = batch_for_shader(shader, "POINTS", {"pos" : UndoVertices.save_selected_coords})
         batch.draw(shader)
+
+        # prop = context.scene.undo_vertices_prop
+        # if prop.use_lock_angle:
+        #     end_point = euler_angle_to_end_point(prop.lock_euler_x, prop.lock_euler_y, prop.lock_euler_z, 3)
+        #     bm = bmesh.new()
+        #     v1 = bm.verts.new((0, 0, 0))
+        #     v2 = bm.verts.new(end_point)
+        #     batch_line = batch_for_shader(shader, "LINES", {"pos" : [v1.co, v2.co]}, indices = [(0, 1)])
+        #     batch_line.draw(shader)
+        #     bm.free()
 
         bgl.glDisable(bgl.GL_BLEND)
 
     def invoke(self, context, event):
-        if context.area.type == 'VIEW_3D':
+        if context.area.type == "VIEW_3D":
             # enable to disable
             if self.is_enable():
                 self.__handle_remove(context)
@@ -74,9 +85,9 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
 
             # 全エリアを再描画（アクティブな画面以外も再描画する）
             area_3d_view_tag_redraw_all()
-            return {'FINISHED'}
+            return {"FINISHED"}
         else:
-            return {'CANCELLED'}
+            return {"CANCELLED"}
 
 def register():
     bpy.utils.register_class(UndoVerticesViewOperator)

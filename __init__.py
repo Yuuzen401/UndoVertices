@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 4),
+    "version": (0, 0, 5),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -46,19 +46,19 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
     def execute(self, context):
         obj = bpy.context.active_object
         bm = bmesh_from_object(obj)
-        UndoVertices.set_selected_verts(bm)
+        selected_verts = UndoVertices.get_selected_verts(bm)
 
         # 未選択の場合
-        if 1 > UndoVertices.get_len_save_verts():
-            UndoVertices.save_selected_verts = None
+        if 1 > len(selected_verts):
             show_message_error("頂点が選択されていません。")
-            return {'CANCELLED'}
+            return {"CANCELLED"}
 
+        UndoVertices.set_selected_verts(selected_verts)
         UndoVertices.set_selected_coords(bm, obj)
         UndoVertices.save_all_len = len(bm.verts)
 
         area_3d_view_tag_redraw_all()
-        return{'FINISHED'}
+        return{"FINISHED"}
 
 class UndoVerticesSelectOperator(Operator, UndoVertices):
     bl_idname = "select_verts.operator"
@@ -68,23 +68,30 @@ class UndoVerticesSelectOperator(Operator, UndoVertices):
         # 頂点数が減っている場合はキャンセルする
         if UndoVertices.is_len_diff() == False:
             show_message_error("頂点数が増減した場合、選択できません。")
-            return {'CANCELLED'}
+            return {"CANCELLED"}
         UndoVertices.select_save_verts(context, bpy.context.active_object)
-        return{'FINISHED'}
+        return{"FINISHED"}
+
+class UndoVerticesResetOperator(Operator, UndoVertices):
+    bl_idname = "reset_verts.operator"
+    bl_label = "Save vertices reset"
+
+    def execute(self, context):
+        UndoVertices.reset_save()
+        return{"FINISHED"}
 
 class UndoVerticesPanel(Panel, UndoVertices):
     bl_label = "Undo Vertices"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
+    bl_space_type = "VIEW_3D"
+    bl_region_type = "UI"
     bl_category = "Undo Vertices"
 
     @classmethod
     def poll(self, context):
-        if context.mode == 'EDIT_MESH':
+        if context.mode == "EDIT_MESH":
             return True
         else:
-            UndoVertices.save_selected_coords = []
-            UndoVertices.save_selected_verts = None
+            UndoVertices.reset_save()
             return False  
 
     def draw(self, context):
@@ -94,7 +101,7 @@ class UndoVerticesPanel(Panel, UndoVertices):
 
         # Save
         box = layout.box()
-        box.label(text = 'Save and Undo vertices')
+        box.label(text = "Save and Undo vertices")
         row = box.row()
         row.scale_y = 2
         col = row.column()
@@ -109,14 +116,15 @@ class UndoVerticesPanel(Panel, UndoVertices):
         col.operator(UndoVerticesUndoOperator.bl_idname, text = "Undo" , text_ctxt = "Undo")
 
         if UndoVertices.is_save() == False:
-            box.label(text = 'not saved')
+            box.label(text = "not saved")
         else:
-            box.label(text = 'saved vertices : ' + str(UndoVertices.get_len_save_verts()))
+            box.label(text = "saved vertices : " + str(UndoVertices.get_len_save_verts()))
+            box.operator(UndoVerticesResetOperator.bl_idname, text = "Reset Save" , text_ctxt = "Reset Save")
 
         # Select
         layout.separator()
         box = layout.box()
-        box.label(text = 'Select saved vertices')
+        box.label(text = "Select saved vertices")
 
         row = box.row(align = True)
         row.prop_enum(prop, "select", "SELECT_SET")
@@ -135,7 +143,7 @@ class UndoVerticesPanel(Panel, UndoVertices):
         # View
         layout.separator()
         box = layout.box()
-        box.label(text = 'View saved vertices')
+        box.label(text = "View saved vertices")
         col = box.column()
         col.scale_y = 2
         if UndoVerticesViewOperator.is_enable():
@@ -148,6 +156,7 @@ classes = (
     UndoVerticesPanel,
     UndoVerticesSaveOperator,
     UndoVerticesSelectOperator,
+    UndoVerticesResetOperator,
     # UndoVerticesUndoOperator,
     # UndoVerticesViewOperator,
     UndoVerticesPreferences,

@@ -68,26 +68,26 @@ def get_distance(verts, bm):
 
     return distance_sort
 
-# curve_name = '__UndoVerticesWorkingTemporaryCurve__'
+# curve_name = "__UndoVerticesWorkingTemporaryCurve__"
 
 # def delete_temporary_curve():
 #    if bpy.data.curves.get(curve_name) is not None:
 #        bpy.data.curves.remove(bpy.data.curves[curve_name])
 
 # def create_temporary_curve():
-#     curve = bpy.data.curves.new(name = curve_name, type='CURVE')
-#     curve.dimensions = '2D'
+#     curve = bpy.data.curves.new(name = curve_name, type="CURVE")
+#     curve.dimensions = "2D"
 #     curve.use_fake_user = True
-#     spline = curve.splines.new('BEZIER')
+#     spline = curve.splines.new("BEZIER")
 #     points = spline.bezier_points
     
 #     point_start = points[0]
 #     point_start.co = (0, 0, 0)
-#     point_start.handle_left_type = 'VECTOR'
-#     point_start.handle_right_type = 'VECTOR'
+#     point_start.handle_left_type = "VECTOR"
+#     point_start.handle_right_type = "VECTOR"
 
 #     points.add(1)
 #     point_end = points[-1]
 #     point_end.co = (1, 1, 0)
-#     point_end.handle_left_type = 'VECTOR'
-#     point_end.handle_right_type = 'VECTOR'
+#     point_end.handle_left_type = "VECTOR"
+#     point_end.handle_right_type = "VECTOR"

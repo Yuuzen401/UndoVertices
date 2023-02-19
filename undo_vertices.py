@@ -24,12 +24,21 @@ class UndoVertices():
         return True if UndoVertices.save_selected_verts else False
 
     @classmethod
+    def reset_save(self):
+        self.save_selected_coords = []
+        self.save_selected_verts = None
+
+    @classmethod
     def get_len_save_verts(self):
         return 0 if self.save_selected_verts is None else len(self.save_selected_verts)
 
     @classmethod
-    def set_selected_verts(self, bm):
-        self.save_selected_verts = [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
+    def set_selected_verts(self, verts):
+        self.save_selected_verts = verts
+
+    @classmethod
+    def get_selected_verts(self, bm):
+        return [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
 
     @classmethod
     def set_selected_coords(self, bm, obj):

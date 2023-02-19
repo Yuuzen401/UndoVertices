@@ -12,24 +12,25 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import bpy
+import bmesh
 import math
 import numpy as np
 import time
 from .exception import *
 
 def is_mesh_edit(obj):
-    return obj and obj.mode == 'EDIT' and obj.type == 'MESH'
+    return obj and obj.mode == "EDIT" and obj.type == "MESH"
 
 def area_3d_view_tag_redraw_all():
     for area in bpy.context.screen.areas:
-        if area.type == 'VIEW_3D':
+        if area.type == "VIEW_3D":
             area.tag_redraw()
 
 # アクティブなエリアのSpaceView3Dを取得する
 def get_space_view_3d():
     aria = bpy.context.area
     for space in aria.spaces:
-        if space.type == 'VIEW_3D':
+        if space.type == "VIEW_3D":
             return space
     else:
         return None
@@ -48,7 +49,7 @@ def show_message_info(message):
 def show_message_error(message):
     def draw(self, context):
         self.layout.label(text = message)
-    bpy.context.window_manager.popup_menu(draw, title = 'Error', icon = 'ERROR')
+    bpy.context.window_manager.popup_menu(draw, title = "Error", icon = "ERROR")
 
 def is_timeout(start_time, error_sec):
     """タイムアウトを判断する
@@ -76,6 +77,42 @@ def distance_3d(x1, y1, z1, x2, y2, z2):
     """3次元上での頂点と頂点の距離を求める
     """
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
+
+
+def get_euler_calc_two_3d_point(co1, co2):
+    """二つの3D座標を辺と見立ててオイラー角を取得する
+
+    :param Vector co1 座標
+    :param Vector co2 座標
+    :return tuple (x角度, y角度, z角度)
+    """
+    bm = bmesh.new()
+    v1 = bm.verts.new(co1)
+    v2 = bm.verts.new(co2)
+    # エッジの向きを取得する
+    vec = v2.co - v1.co
+    # オイラー角を取得する
+    euler = vec.to_track_quat("Z", "Y").to_euler()
+    x = round(math.degrees(euler.x), 2)
+    y = round(math.degrees(euler.y), 2)
+    z = round(math.degrees(euler.z), 2)
+    bm.free()
+    return (x, y, z)
+
+def euler_angle_to_end_point(x, y, z, length):    
+    phi = math.radians(x)
+    theta = math.radians(y)
+    psi = math.radians(z)
+    x = length * math.cos(phi) * math.sin(theta) * math.cos(psi)
+    y = length * math.cos(phi) * math.sin(theta) * math.sin(psi)
+    z = length * math.cos(phi) * math.cos(theta)
+    return (x, y, z)
+
+def match_3d_euler(euler1, euler2, diff_value):
+    match_x = abs(euler1[0] - euler2[0]) < diff_value
+    match_y = abs(euler1[1] - euler2[1]) < diff_value
+    match_z = abs(euler1[2] - euler2[2]) < diff_value
+    return match_x == True and match_y == True and match_z == True
 
 def create_bezier_curve(segment, x_data = [0, 1], y_data = [0 , 1]):
     """2Dのベジェ曲線を作る
