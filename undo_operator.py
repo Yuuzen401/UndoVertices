@@ -69,10 +69,21 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
             row = box.row()
             row.scale_y = 2
             row.prop(prop, "constant_rate", icon = "NOCURVE")
+
         elif prop.transform_method == "Curve":
             obj = context.active_object
             mod = obj.modifiers[modifier_name]
-            layout.template_curve_mapping(mod, "falloff_curve")
+            box = layout.box()
+            row = box.row()
+            row.scale_y = 2
+            row.prop(prop, "eval_method")
+            row = box.row()
+            row.scale_y = 2
+            row.prop(prop, "curve_rate")
+            row = box.row()
+            row.scale_y = 2
+            row.prop(prop, "eval_roughness")
+            box.template_curve_mapping(mod, "falloff_curve")
 
     def execute(self, context):
         prop = context.scene.undo_vertices_prop
@@ -100,10 +111,14 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                     mod.falloff_curve.use_clip = True
 
                 # drawで実行したマップからカーブの座標を取得する
-                locations = get_curve_map_locations(obj.modifiers[modifier_name])
+                locations = get_curve_map_locations(obj.modifiers[modifier_name], prop.curve_rate)
 
-                # 変更前と変更後の距離を取得する
-                distance = get_distance(UndoVertices.save_selected_verts, bm)
+                if prop.eval_method == "3D_CURSOR" :
+                    location = get_avg_location(bm.verts)
+                    distance = get_distance(UndoVertices.save_selected_verts, bm, prop.eval_roughness / 1000, bpy.context.scene.cursor.location)
+                else :
+                    # 変更前と変更後の距離を取得する
+                    distance = get_distance(UndoVertices.save_selected_verts, bm, prop.eval_roughness / 1000)
 
                 # UI_カーブマッピングをベジェに変換する
                 bezier_y = create_bezier_curve(UndoVertices.get_len_save_verts(), locations[0], locations[1])

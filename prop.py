@@ -20,6 +20,10 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
         ("Constant", "Constant", "Constant", "NOCURVE", 1),
         ("Curve", "Curve", "Curve", "FCURVE", 2),
     ]
+    eval_method_enums = [
+        ("DEFAULT", "Default", "Default", 1),
+        ("3D_CURSOR", "Select", "Select", "PIVOT_CURSOR", 2),
+    ]
     lock_axiz_enums = [
         ("X", "X", ""),
         ("Y", "Y", ""),
@@ -34,10 +38,16 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
 
     # 変更方法
     transform_method : EnumProperty(items = transform_method_enums, name = "Method", default = "Constant")
+    # 評価方法
+    eval_method : EnumProperty(items = eval_method_enums, name = "Method", default = "DEFAULT")
+    # 評価の粗さ
+    eval_roughness : IntProperty(name = "Roughness", default = 0, min = 0, max = 100)
     # 一定の変更率
     constant_rate : IntProperty(name = "Constant Rate", default = 0, min = 0, max = 100)
+    # カーブ変更率
+    curve_rate : FloatProperty(name = "Curve Rate", default = 1, min = -100, max = 100, precision = 2)
     # 軸の固定
-    lock_axiz : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options={"ENUM_FLAG"})
+    lock_axiz : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options = {"ENUM_FLAG"})
     # 選択
     select : EnumProperty(items = select_enums, name = "Select", default = "SELECT_SET")
     # # オイラー角による固定をするかどうか

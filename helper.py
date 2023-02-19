@@ -73,6 +73,22 @@ def get_coord_calc_two_point(p1, p2, progress):
     """
     return tuple(p1[i] + (p2[i] - p1[i]) * progress for i in range(3))
 
+def get_avg_location(verts):
+    """複数の頂点から平均座標を求める
+    """
+    total_x = 0
+    total_y = 0
+    total_z = 0
+    for v in verts:
+        total_x += v.co.x
+        total_y += v.co.y
+        total_z += v.co.z
+    num_verts = len(verts)
+    avg_x = total_x / num_verts
+    avg_y = total_y / num_verts
+    avg_z = total_z / num_verts
+    return (avg_x, avg_y, avg_z)
+
 def distance_3d(x1, y1, z1, x2, y2, z2):
     """3次元上での頂点と頂点の距離を求める
     """

@@ -17,7 +17,7 @@ import numpy as np
 from pprint import pprint
 from .helper import *
 
-def get_curve_map_locations(mod):
+def get_curve_map_locations(mod, curve_late):
     curve_map = mod.falloff_curve
     curves = curve_map.curves[0]
     map_x = []
@@ -25,26 +25,44 @@ def get_curve_map_locations(mod):
     for i, p in enumerate(curves.points):
         location = curves.points[i].location
         map_x.append(location[0])
-        map_y.append(location[1])
+        map_y.append(location[1] * curve_late)
     return (map_x, map_y)
 
-def get_distance(verts, bm):
+def get_distance(verts, bm, roughness, fixed = None):
     # 移動距離を算出し、変化した量で並べる
     distance = []
-    for v in verts:
-        save_co = v[0]
-        index = v[2]
-        now_co = bm.verts[index].co
-        x1 = save_co.x
-        y1 = save_co.y
-        z1 = save_co.z
-        x2 = now_co.x
-        y2 = now_co.y
-        z2 = now_co.z
-        if x1 == x2 and y1 == y2 and z1 == z2:
-            distance.append((0, index))
-        else:
-            distance.append((distance_3d(x1, y1, z1, x2, y2, z2), index))
+    if fixed is None:
+        for v in verts:
+            save_co = v[0]
+            index = v[2]
+            now_co = bm.verts[index].co
+            x1 = save_co.x
+            y1 = save_co.y
+            z1 = save_co.z
+            x2 = now_co.x
+            y2 = now_co.y
+            z2 = now_co.z
+            if x1 == x2 and y1 == y2 and z1 == z2:
+                distance.append((0, index))
+            else:
+                distance.append((distance_3d(x1, y1, z1, x2, y2, z2), index))
+
+    # 固定座標からの移動量で評価する
+    else:
+        for v in verts:
+            index = v[2]
+            now_co = bm.verts[index].co
+            x1 = fixed[0]
+            y1 = fixed[1]
+            z1 = fixed[2]
+            x2 = now_co.x
+            y2 = now_co.y
+            z2 = now_co.z
+            if x1 == x2 and y1 == y2 and z1 == z2:
+                distance.append((0, index))
+            else:
+                distance.append((distance_3d(x1, y1, z1, x2, y2, z2), index))
+
     # 最も大きな移動量を持つものを1として並び変える
     distance = sorted(distance)
     distance_sort = []
@@ -59,7 +77,8 @@ def get_distance(verts, bm):
         # 初回ではない かつ 前回と移動量は変化量を同じにする
         elif i != 0:
             bf_dis = distance[i - 1][0]
-            if dis == bf_dis:
+            # 移動量の差に対して粗さをつけて判断する
+            if abs(dis - bf_dis) <= roughness:
                 distance_sort.append((distance_sort[-1][0], index))
             else:
                 distance_sort.append(((i + 1) / total, index))
