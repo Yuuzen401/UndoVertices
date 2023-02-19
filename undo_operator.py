@@ -114,7 +114,6 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                 locations = get_curve_map_locations(obj.modifiers[modifier_name], prop.curve_rate)
 
                 if prop.eval_method == "3D_CURSOR" :
-                    location = get_avg_location(bm.verts)
                     distance = get_distance(UndoVertices.save_selected_verts, bm, prop.eval_roughness / 1000, bpy.context.scene.cursor.location)
                 else :
                     # 変更前と変更後の距離を取得する

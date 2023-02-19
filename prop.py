@@ -22,7 +22,7 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     ]
     eval_method_enums = [
         ("DEFAULT", "Default", "Default", 1),
-        ("3D_CURSOR", "Select", "Select", "PIVOT_CURSOR", 2),
+        ("3D_CURSOR", "Cursor", "Cursor", "ORIENTATION_CURSOR", 2),
     ]
     lock_axiz_enums = [
         ("X", "X", ""),
