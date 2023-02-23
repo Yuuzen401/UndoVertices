@@ -31,7 +31,7 @@ class UndoVertices():
 
     @classmethod
     def reset_save(self, context):
-        self.remove_annotation_layer(context)
+        # self.remove_annotation_layer(context)
         self.save_selected_verts = None
         self.save_selected_coords = []
         self.save_selected_edge_coords = []
@@ -59,7 +59,7 @@ class UndoVertices():
             v_co = obj.matrix_world @ v_co
             self.save_selected_coords.append(v_co)
 
-        self.set_save_selected_edge_coords(bm, obj)
+        #self.set_save_selected_edge_coords(bm, obj)
 
     @classmethod
     def set_save_selected_edge_coords(self, bm, obj):

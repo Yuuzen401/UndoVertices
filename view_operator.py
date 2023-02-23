@@ -68,24 +68,24 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
         prop = context.scene.undo_vertices_prop
         if context.area.type == "VIEW_3D":
             # enable to disable
-            if prop.is_view:
-                prop.is_view = False
-                UndoVertices.toggle_annotation_view()
+            # if prop.is_view:
+            #     prop.is_view = False
+            #     UndoVertices.toggle_annotation_view()
 
-            # disable to enable
-            else:
-                prop.is_view = True
-                UndoVertices.toggle_annotation_view()
-
-            # # enable to disable
-            # if self.is_enable():
-            #     self.__handle_remove(context)
             # # disable to enable
             # else:
-            #     self.__handle_add(context)
+            #     prop.is_view = True
+            #     UndoVertices.toggle_annotation_view()
 
-            # # 全エリアを再描画（アクティブな画面以外も再描画する）
-            # area_3d_view_tag_redraw_all()
+            # enable to disable
+            if self.is_enable():
+                self.__handle_remove(context)
+            # disable to enable
+            else:
+                self.__handle_add(context)
+
+            # 全エリアを再描画（アクティブな画面以外も再描画する）
+            area_3d_view_tag_redraw_all()
             return {"FINISHED"}
         else:
             return {"CANCELLED"}
