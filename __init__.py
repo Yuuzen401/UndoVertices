@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 10),
+    "version": (0, 0, 11),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -58,7 +58,7 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
         UndoVertices.set_selected_verts(selected_verts)
         UndoVertices.set_selected_coords(bm, obj)
         UndoVertices.save_all_len = len(bm.verts)
-        # UndoVertices.save_to_annotation(context)
+        UndoVertices.save_to_annotation(context)
 
         area_3d_view_tag_redraw_all()
         return{"FINISHED"}
@@ -149,15 +149,15 @@ class UndoVerticesPanel(Panel, UndoVertices):
         box.label(text = "View saved vertices")
         col = box.column()
         col.scale_y = 2
-        if UndoVerticesViewOperator.is_enable():
-        # if prop.is_view:
+        # if UndoVerticesViewOperator.is_enable():
+        if prop.is_view:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = True,  icon = "PAUSE") 
         else:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = False, icon = "PLAY")
         row = box.row(align = True)
-        # row.scale_y = 1.5
-        # row.prop(prop, "is_view_point", text = "Point")
-        # row.prop(prop, "is_view_line", text = "Line")
+        row.scale_y = 1.5
+        row.prop(prop, "is_view_point", text = "Point")
+        row.prop(prop, "is_view_line", text = "Line")
 
 classes = (
     UndoVerticesPropertyGroup,
