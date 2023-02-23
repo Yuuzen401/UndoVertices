@@ -15,6 +15,9 @@ from bpy.types import PropertyGroup
 from bpy.props import IntProperty, FloatProperty, FloatVectorProperty, BoolProperty, PointerProperty, EnumProperty
 from .undo_vertices import UndoVertices
 
+def update_is_view(self, context):
+    UndoVertices.toggle_annotation_view()
+
 class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     transform_method_enums = [
         ("Constant", "Constant", "Constant", "NOCURVE", 1),
@@ -50,13 +53,9 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     lock_axiz : EnumProperty(items = lock_axiz_enums, name = "lock axiz", options = {"ENUM_FLAG"})
     # 選択
     select : EnumProperty(items = select_enums, name = "Select", default = "SELECT_SET")
-    # # オイラー角による固定をするかどうか
-    # use_lock_angle : BoolProperty(name = "Use Lock Angle", default = False)
-    # # オイラー角_x
-    # diff_lock_euler_value : IntProperty(name = "Value", default = 30, min = 0, max = 180)
-    # # オイラー角_x
-    # lock_euler_x : FloatProperty(name = "lock_euler_x", default = 0, min = -180, max = 180)
-    # # オイラー角_y
-    # lock_euler_y : FloatProperty(name = "lock_euler_y", default = 0, min = -180, max = 180)
-    # # オイラー角_z
-    # lock_euler_z : FloatProperty(name = "lock_euler_z", default = 0, min = -180, max = 180)
+    # 非表示の頂点を変更するか
+    change_hide_vertices : BoolProperty(name = "Lock Hide", default = False)
+    # 保存した頂点を描画するか
+    is_view : BoolProperty(name = "View", default = True)
+    is_view_line : BoolProperty(name = "View Line", default = False, update = update_is_view)
+    is_view_point : BoolProperty(name = "View Point", default = True, update = update_is_view)

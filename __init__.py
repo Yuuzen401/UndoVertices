@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 8),
+    "version": (0, 0, 9),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -34,6 +34,7 @@ from .usecase import get_curve_map_locations, get_distance
 from .preferences import *
 from .exception import *
 from .mesh_helpers import *
+from .grease_pencil_helpers import *
 from .undo_vertices import UndoVertices
 from .view_operator import *
 from .undo_operator import *
@@ -42,10 +43,11 @@ from .prop import UndoVerticesPropertyGroup
 class UndoVerticesSaveOperator(Operator, UndoVertices):
     bl_idname = "save_verts.operator"
     bl_label = "Save vertices"
+    bl_options = {"REGISTER", "UNDO"}
 
     def execute(self, context):
         obj = bpy.context.active_object
-        bm = bmesh_from_object(obj)
+        bm = bmesh_copy_from_object(obj, transform = True, triangulate = False)
         selected_verts = UndoVertices.get_selected_verts(bm)
 
         # 未選択の場合
@@ -56,6 +58,7 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
         UndoVertices.set_selected_verts(selected_verts)
         UndoVertices.set_selected_coords(bm, obj)
         UndoVertices.save_all_len = len(bm.verts)
+        UndoVertices.save_to_annotation(context)
 
         area_3d_view_tag_redraw_all()
         return{"FINISHED"}
@@ -77,7 +80,7 @@ class UndoVerticesResetOperator(Operator, UndoVertices):
     bl_label = "Save vertices reset"
 
     def execute(self, context):
-        UndoVertices.reset_save()
+        UndoVertices.reset_save(context)
         return{"FINISHED"}
 
 class UndoVerticesPanel(Panel, UndoVertices):
@@ -91,7 +94,7 @@ class UndoVerticesPanel(Panel, UndoVertices):
         if context.mode == "EDIT_MESH":
             return True
         else:
-            UndoVertices.reset_save()
+            UndoVertices.reset_save(context)
             return False  
 
     def draw(self, context):
@@ -146,10 +149,15 @@ class UndoVerticesPanel(Panel, UndoVertices):
         box.label(text = "View saved vertices")
         col = box.column()
         col.scale_y = 2
-        if UndoVerticesViewOperator.is_enable():
+        # if UndoVerticesViewOperator.is_enable():
+        if prop.is_view:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = True,  icon = "PAUSE") 
         else:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = False, icon = "PLAY")
+        row = box.row(align = True)
+        row.scale_y = 1.5
+        row.prop(prop, "is_view_point", text = "Point")
+        row.prop(prop, "is_view_line", text = "Line")
 
 classes = (
     UndoVerticesPropertyGroup,

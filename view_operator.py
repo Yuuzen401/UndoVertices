@@ -62,29 +62,30 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
         batch = batch_for_shader(shader, "POINTS", {"pos" : UndoVertices.save_selected_coords})
         batch.draw(shader)
 
-        # prop = context.scene.undo_vertices_prop
-        # if prop.use_lock_angle:
-        #     end_point = euler_angle_to_end_point(prop.lock_euler_x, prop.lock_euler_y, prop.lock_euler_z, 3)
-        #     bm = bmesh.new()
-        #     v1 = bm.verts.new((0, 0, 0))
-        #     v2 = bm.verts.new(end_point)
-        #     batch_line = batch_for_shader(shader, "LINES", {"pos" : [v1.co, v2.co]}, indices = [(0, 1)])
-        #     batch_line.draw(shader)
-        #     bm.free()
-
         bgl.glDisable(bgl.GL_BLEND)
 
     def invoke(self, context, event):
+        prop = context.scene.undo_vertices_prop
         if context.area.type == "VIEW_3D":
             # enable to disable
-            if self.is_enable():
-                self.__handle_remove(context)
+            if prop.is_view:
+                prop.is_view = False
+                UndoVertices.toggle_annotation_view()
+
             # disable to enable
             else:
-                self.__handle_add(context)
+                prop.is_view = True
+                UndoVertices.toggle_annotation_view()
 
-            # 全エリアを再描画（アクティブな画面以外も再描画する）
-            area_3d_view_tag_redraw_all()
+            # # enable to disable
+            # if self.is_enable():
+            #     self.__handle_remove(context)
+            # # disable to enable
+            # else:
+            #     self.__handle_add(context)
+
+            # # 全エリアを再描画（アクティブな画面以外も再描画する）
+            # area_3d_view_tag_redraw_all()
             return {"FINISHED"}
         else:
             return {"CANCELLED"}

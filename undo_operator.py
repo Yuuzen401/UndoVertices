@@ -46,15 +46,9 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
         row.prop_enum(prop, "lock_axiz", "X")
         row.prop_enum(prop, "lock_axiz", "Y")
         row.prop_enum(prop, "lock_axiz", "Z")
-
-        # row = box.row()
-        # row.prop(prop, "use_lock_angle")
-        # row = box.row()
-        # row.prop(prop, "diff_lock_euler_value")
-        # row = box.row()
-        # row.prop(prop, "lock_euler_x", text = "X")
-        # row.prop(prop, "lock_euler_y", text = "Y")
-        # row.prop(prop, "lock_euler_z", text = "Z")
+        row = box.row()
+        row.scale_y = 1.5
+        row.prop(prop, 'change_hide_vertices', text = "Change hide vertices")
 
         # ---------------------------------------
         layout.separator()
@@ -123,32 +117,31 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                 bezier_y = create_bezier_curve(UndoVertices.get_len_save_verts(), locations[0], locations[1])
                 total = len(bezier_y)
                 for v in UndoVertices.save_selected_verts:
+
                     save_co = v[0]
                     index = v[2]
                     now_co = bm.verts[index].co
+                    is_hide = False
+                    if prop.change_hide_vertices == False:
+                        is_hide = bm.verts[index].hide
 
-                    for d in distance:
-                        if index == d[1]:
-                            pos = d[0]
-                            break
-    
-                    pos = int(total * pos) - 1
-                    calc_rate = bezier_y[pos]
+                    if is_hide :
+                        bm.verts[index].co.x = save_co[0]
+                        bm.verts[index].co.y = save_co[1]
+                        bm.verts[index].co.z = save_co[2]
+                    else :
+                        for d in distance:
+                            if index == d[1]:
+                                pos = d[0]
+                                break
 
-                    # is_lock_euler_match = False
-                    # if prop.use_lock_angle:
-                    #     end_point = euler_angle_to_end_point(prop.lock_euler_x, prop.lock_euler_y, prop.lock_euler_z, 10)
-                    #     input_euler = get_euler_calc_two_3d_point((0, 0, 0), end_point)
-                    #     calc_euler = get_euler_calc_two_3d_point(now_co, save_co)
-                    #     is_lock_euler_match = match_3d_euler(input_euler, calc_euler, prop.diff_lock_euler_value)
+                        pos = int(total * pos) - 1
+                        calc_rate = bezier_y[pos]
 
-                    calc_co = get_coord_calc_two_point(save_co, now_co, calc_rate)
-                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
-                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
-                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
-                    # bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz or is_lock_euler_match else calc_co[0]
-                    # bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz or is_lock_euler_match else calc_co[1]
-                    # bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz or is_lock_euler_match else calc_co[2]
+                        calc_co = get_coord_calc_two_point(save_co, now_co, calc_rate)
+                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
+                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
+                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
 
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
@@ -158,20 +151,19 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                     index = v[2]
                     now_co = bm.verts[index].co
 
-                    # is_lock_euler_match = False
-                    # if prop.use_lock_angle:
-                    #     end_point = euler_angle_to_end_point(prop.lock_euler_x, prop.lock_euler_y, prop.lock_euler_z, 10)
-                    #     input_euler = get_euler_calc_two_3d_point((0, 0, 0), end_point)
-                    #     calc_euler = get_euler_calc_two_3d_point(now_co, save_co)
-                    #     is_lock_euler_match = match_3d_euler(input_euler, calc_euler, prop.diff_lock_euler_value)
+                    is_hide = False
+                    if prop.change_hide_vertices == False:
+                        is_hide = bm.verts[index].hide
 
-                    calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
-                    bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
-                    bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
-                    bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
-                    # bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz or is_lock_euler_match else calc_co[0]
-                    # bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz or is_lock_euler_match else calc_co[1]
-                    # bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz or is_lock_euler_match else calc_co[2]
+                    if is_hide :
+                        bm.verts[index].co.x = save_co[0]
+                        bm.verts[index].co.y = save_co[1]
+                        bm.verts[index].co.z = save_co[2]
+                    else :
+                        calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
+                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
+                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
+                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
 
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
