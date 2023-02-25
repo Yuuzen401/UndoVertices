@@ -18,12 +18,18 @@ class UndoVertices():
     # 保存する頂点
     annotation_point_name = "__UndoVerticesWorkingTemporaryAnnotationPoint__"
     annotation_line_name = "__UndoVerticesWorkingTemporaryAnnotationLine__"
+    annotation_point_mod_name = "__UndoVerticesWorkingTemporaryAnnotationPointMod__"
+    annotation_line_mod_name = "__UndoVerticesWorkingTemporaryAnnotationLineMod__"
     save_selected_verts = None
     save_selected_coords = []
     save_selected_edge_coords = []
+    save_selected_coords_mod = []
+    save_selected_edge_coords_mod = []
     save_all_len = 0
     annotation_layer_point = None
     annotation_layer_line = None
+    annotation_layer_point_mod = None
+    annotation_layer_line_mod = None
 
     @classmethod
     def is_save(self):
@@ -35,9 +41,13 @@ class UndoVertices():
         self.save_selected_verts = None
         self.save_selected_coords = []
         self.save_selected_edge_coords = []
+        self.save_selected_coords_mod = []
+        self.save_selected_edge_coords_mod = []
         self.save_all_len = 0
         self.annotation_layer_point = None
         self.annotation_layer_line = None
+        self.annotation_layer_point_mod = None
+        self.annotation_layer_line_mod = None
 
     @classmethod
     def get_len_save_verts(self):
@@ -52,31 +62,59 @@ class UndoVertices():
         return [(v.co.copy(), v.normal.copy(), v.index) for v in bm.verts if v.select]
 
     @classmethod
-    def set_selected_coords(self, bm, obj):
+    def set_selected_coords(self):
         self.save_selected_coords = []
+        self.save_selected_edge_coords = []
+        self.save_selected_coords_mod = []
+        self.save_selected_edge_coords_mod = []
+        obj = bpy.context.active_object
+
+        bm = bmesh_from_object(obj)
+        bm.select_flush(True)
+        bm.verts.ensure_lookup_table()
+        for v in bm.verts:
+            v.select = False
+        for v in self.save_selected_verts:
+            index = v[2]
+            bm.verts[index].select = True
+        bm.select_flush_mode()
+        bmesh.update_edit_mesh(obj.data)
+
+        bm = bmesh_copy_from_object(obj, True, False, False)
+
+        # 表示する頂点を設定する
         verts_co = [v.co.copy() for v in bm.verts if v.select]
         for v_co in verts_co:
-            v_co = obj.matrix_world @ v_co
             self.save_selected_coords.append(v_co)
 
-        self.set_save_selected_edge_coords(bm, obj)
-
-    @classmethod
-    def set_save_selected_edge_coords(self, bm, obj):
-        self.save_selected_edge_coords = []
+        # 表示するエッジを設定する
         edges = [e for e in bm.edges if e.select]
         for e in edges:
-            co_1 = obj.matrix_world @ e.verts[0].co.copy()
-            co_2 = obj.matrix_world @ e.verts[1].co.copy()
+            co_1 = e.verts[0].co.copy()
+            co_2 = e.verts[1].co.copy()
             self.save_selected_edge_coords.append((co_1, co_2))
 
+        bm_mod = bmesh_copy_from_object(obj, True, False, True)
+
+        # 表示する頂点を設定する
+        verts_co = [v.co.copy() for v in bm_mod.verts if v.select]
+        for v_co in verts_co:
+            self.save_selected_coords_mod.append(v_co)
+
+        # 表示するエッジを設定する
+        edges = [e for e in bm_mod.edges if e.select]
+        for e in edges:
+            co_1 = e.verts[0].co.copy()
+            co_2 = e.verts[1].co.copy()
+            self.save_selected_edge_coords_mod.append((co_1, co_2))
+           
     @classmethod
     def init_annotation_layer(self, context):
         self.remove_annotation_layer(context)
         layer = get_gp_layer(context, self.annotation_line_name)
         layer.color = (0, 1, 1)
-        layer.annotation_opacity = 0.1
-        layer.thickness = 10
+        layer.annotation_opacity = 0.2
+        layer.thickness = 5
         self.annotation_layer_line = layer
 
         layer = get_gp_layer(context, self.annotation_point_name)
@@ -85,18 +123,30 @@ class UndoVertices():
         layer.thickness = 7
         self.annotation_layer_point = layer
 
+        layer = get_gp_layer(context, self.annotation_line_mod_name)
+        layer.color = (0, 0.5, 0)
+        layer.annotation_opacity = 1
+        layer.thickness = 1
+        self.annotation_layer_line_mod = layer
+
+        layer = get_gp_layer(context, self.annotation_point_mod_name)
+        layer.color = (0, 0.5, 0)
+        layer.annotation_opacity = 1
+        layer.thickness = 3
+        self.annotation_layer_point_mod = layer
+
     @classmethod
     def remove_annotation_layer(self, context):
         gp = context.scene.grease_pencil
         if gp is not None:
             for layer in list(gp.layers) :
-                if self.annotation_point_name or self.annotation_line_name in layer.info :
+                if self.annotation_point_name or self.annotation_line_name or self.annotation_point_mod_name or self.annotation_line_mod_name in layer.info :
                     gp.layers.remove( layer )
 
     @classmethod
     def save_to_annotation(self, context):
         self.init_annotation_layer(context)
-        frame = get_gp_frame(self.annotation_layer_line )
+        frame = get_gp_frame(self.annotation_layer_line)
         for e in self.save_selected_edge_coords :
             stroke = frame.strokes.new()
             stroke.points.add(1)
@@ -112,14 +162,32 @@ class UndoVertices():
             stroke.points[-1].co = v
             stroke.points.update()
 
+        frame = get_gp_frame(self.annotation_layer_line_mod)
+        for e in self.save_selected_edge_coords_mod :
+            stroke = frame.strokes.new()
+            stroke.points.add(1)
+            stroke.points[-1].co = e[0]
+            stroke.points.add(1)
+            stroke.points[-1].co = e[1]
+            stroke.points.update()
+
+        frame = get_gp_frame(self.annotation_layer_point_mod)
+        for v in self.save_selected_coords_mod :
+            stroke = frame.strokes.new()
+            stroke.points.add(1)
+            stroke.points[-1].co = v
+            stroke.points.update()
+
         self.toggle_annotation_view()
 
     @classmethod
     def toggle_annotation_view(self):
         if self.annotation_layer_point is not None:
             prop = bpy.context.scene.undo_vertices_prop
-            self.annotation_layer_point.hide = False == (prop.is_view and prop.is_view_point)
-            self.annotation_layer_line.hide = False == (prop.is_view and prop.is_view_line)
+            self.annotation_layer_point.hide = False == (prop.is_view and prop.is_view_point and prop.is_modifier == False)
+            self.annotation_layer_line.hide = False == (prop.is_view and prop.is_view_line and prop.is_modifier == False)
+            self.annotation_layer_point_mod.hide = False == (prop.is_view and prop.is_view_point and prop.is_modifier == True)
+            self.annotation_layer_line_mod.hide = False == (prop.is_view and prop.is_view_line and prop.is_modifier == True)
 
     @classmethod
     def is_len_diff(self):

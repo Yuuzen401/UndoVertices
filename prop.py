@@ -59,3 +59,5 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     is_view : BoolProperty(name = "View", default = True)
     is_view_line : BoolProperty(name = "View Line", default = False, update = update_is_view)
     is_view_point : BoolProperty(name = "View Point", default = True, update = update_is_view)
+    # モディファイアの評価を有効にするか
+    is_modifier : BoolProperty(name = "Modifier", default = False, update = update_is_view)
