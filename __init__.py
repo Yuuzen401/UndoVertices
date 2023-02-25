@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 13),
+    "version": (0, 0, 14),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -56,7 +56,7 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
             return {"CANCELLED"}
 
         UndoVertices.set_selected_verts(selected_verts)
-        UndoVertices.set_selected_coords()
+        UndoVertices.set_selected_coords(bm, obj)
         UndoVertices.save_all_len = len(bm.verts)
         UndoVertices.save_to_annotation(context)
 
@@ -159,9 +159,6 @@ class UndoVerticesPanel(Panel, UndoVertices):
         row.scale_y = 1.5
         row.prop(prop, "is_view_point", text = "Point")
         row.prop(prop, "is_view_line", text = "Line")
-        row = box.row()
-        row.scale_y = 1.5
-        row.prop(prop, "is_modifier", text = "Modifiers when saved", icon = "MODIFIER")
 
 classes = (
     UndoVerticesPropertyGroup,
