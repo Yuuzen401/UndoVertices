@@ -19,9 +19,6 @@ from .helper import *
 from .mesh_helpers import *
 from .usecase import *
 
-# 作業用の一時モディファイアの名前
-modifier_name = "__UndoVerticesWorkingTemporaryModifier__"
-
 class UndoVerticesUndoOperator(Operator, UndoVertices):
     bl_idname = "undo_verts.operator"
     bl_label = "Undo Vertices Control"
@@ -30,9 +27,16 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
     # 保存する頂点
     save_selected_verts = None
 
+    # 作業用の一時モディファイアの名前
+    modifier_name = "__UndoVerticesWorkingTemporaryModifier__"
+
     @classmethod
-    def is_save(self):
-        return True if UndoVertices.save_selected_verts else False
+    def remove_working_temporary_modifier(self):
+        obj = bpy.context.active_object
+        if obj is not None:
+            for modifier in obj.modifiers:
+                if self.modifier_name == modifier.name:
+                    obj.modifiers.remove(modifier)
 
     def draw(self, context):
         prop = context.scene.undo_vertices_prop
@@ -66,7 +70,7 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
 
         elif prop.transform_method == "Curve":
             obj = context.active_object
-            mod = obj.modifiers[modifier_name]
+            mod = obj.modifiers[self.modifier_name]
             box = layout.box()
             row = box.row()
             row.scale_y = 2
@@ -97,15 +101,15 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
             # カーブによる編集時のみ
             if prop.transform_method == "Curve":
                 # 制御用のワープモディファイアを編集時のみ追加
-                if obj.modifiers.find(modifier_name) < 0:
+                if obj.modifiers.find(self.modifier_name) < 0:
                     bpy.ops.object.modifier_add(type = "WARP")
                     mod = obj.modifiers[-1]
-                    mod.name = modifier_name
+                    mod.name = self.modifier_name
                     mod.falloff_type = "CURVE"
                     mod.falloff_curve.use_clip = True
 
                 # drawで実行したマップからカーブの座標を取得する
-                locations = get_curve_map_locations(obj.modifiers[modifier_name], prop.curve_rate)
+                locations = get_curve_map_locations(obj.modifiers[self.modifier_name], prop.curve_rate)
 
                 if prop.eval_method == "3D_CURSOR" :
                     distance = get_distance(UndoVertices.save_selected_verts, bm, prop.eval_roughness / 1000, bpy.context.scene.cursor.location)
