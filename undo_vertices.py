@@ -26,6 +26,7 @@ class UndoVertices():
     # annotation_layer_line = None
     save_bm = None
     save_bm_mod = None
+    active_obj_name = None
 
     @classmethod
     def is_save(self):

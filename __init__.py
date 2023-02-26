@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 15),
+    "version": (0, 0, 16),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -45,8 +45,10 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
     bl_label = "Save vertices"
     bl_options = {"REGISTER", "UNDO"}
 
+    draw_handler = None
+
     def execute(self, context):
-        obj = bpy.context.active_object
+        obj = context.active_object
         bm = bmesh_from_object(obj)
         selected_verts = UndoVertices.get_selected_verts(bm)
 
@@ -88,7 +90,31 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
         UndoVertices.save_bm_mod = bm_copy
 
         area_3d_view_tag_redraw_all()
-        return{"FINISHED"}
+        UndoVertices.active_obj_name = obj.name
+        self.__handle_add(context)
+        return {"FINISHED"}
+
+    @classmethod
+    def __handle_add(self, context):
+        if self.draw_handler is None :
+            self.draw_handler = bpy.types.SpaceView3D.draw_handler_add(self.__draw, (context, ), "WINDOW", "POST_VIEW")
+
+    @classmethod
+    def __handle_remove(self, context):
+        bpy.types.SpaceView3D.draw_handler_remove(self.draw_handler, "WINDOW")
+        self.draw_handler = None
+
+    @classmethod
+    def __draw(self, context):
+        now_active_name = context.active_object.name
+        if UndoVertices.active_obj_name != now_active_name:
+            UndoVertices.reset_save(context)
+            UndoVerticesUndoOperator.remove_working_temporary_modifier()
+            self.__handle_remove(context)
+            area_3d_view_tag_redraw_all()
+
+        elif context.mode != "EDIT_MESH":
+            UndoVerticesUndoOperator.remove_working_temporary_modifier()
 
 class UndoVerticesSelectOperator(Operator, UndoVertices):
     bl_idname = "select_verts.operator"
@@ -120,10 +146,6 @@ class UndoVerticesPanel(Panel, UndoVertices):
     def poll(self, context):
         if context.mode == "EDIT_MESH":
             return True
-        else:
-            UndoVertices.reset_save(context)
-            UndoVerticesUndoOperator.remove_working_temporary_modifier()
-            return False  
 
     def draw(self, context):
         prop = context.scene.undo_vertices_prop

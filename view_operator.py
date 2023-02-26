@@ -49,6 +49,9 @@ class UndoVerticesViewOperator(Operator, UndoVertices):
 
     @classmethod
     def __draw(self, context):
+        if context.mode != "EDIT_MESH":
+            self.force_disable()
+
         prop = context.scene.undo_vertices_prop
         if prop.is_view_point == False and prop.is_view_line == False:
             return
