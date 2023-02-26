@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 14),
+    "version": (0, 0, 15),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -56,9 +56,36 @@ class UndoVerticesSaveOperator(Operator, UndoVertices):
             return {"CANCELLED"}
 
         UndoVertices.set_selected_verts(selected_verts)
-        UndoVertices.set_selected_coords(bm, obj)
+        # UndoVertices.set_selected_coords(bm, obj)
         UndoVertices.save_all_len = len(bm.verts)
-        UndoVertices.save_to_annotation(context)
+        # UndoVertices.save_to_annotation(context)
+
+        # 保存した頂点で再選択して更新してからBMをコピーする
+        bm.verts.ensure_lookup_table()
+        for v in bm.verts:
+            v.select = False
+        for v in self.save_selected_verts:
+            index = v[2]
+            bm.verts[index].select = True
+
+        bm.select_flush_mode()
+        bmesh.update_edit_mesh(obj.data)
+
+        # モディファイア適用無の状態で保存
+        bm_copy = bmesh_copy_from_object(obj, True, False, False)
+        for v in bm_copy.verts:
+            if v.select == False :
+                bm_copy.verts.remove(v)
+        bm_copy.verts.index_update()
+        UndoVertices.save_bm = bm_copy
+
+        # モディファイア適用有の状態で保存
+        bm_copy = bmesh_copy_from_object(obj, True, False, True)
+        for v in bm_copy.verts:
+            if v.select == False :
+                bm_copy.verts.remove(v)
+        bm_copy.verts.index_update()
+        UndoVertices.save_bm_mod = bm_copy
 
         area_3d_view_tag_redraw_all()
         return{"FINISHED"}
@@ -150,8 +177,8 @@ class UndoVerticesPanel(Panel, UndoVertices):
         box.label(text = "View saved vertices")
         col = box.column()
         col.scale_y = 2
-        # if UndoVerticesViewOperator.is_enable():
-        if prop.is_view:
+        if UndoVerticesViewOperator.is_enable():
+        # if prop.is_view:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = True,  icon = "PAUSE") 
         else:
             col.operator(UndoVerticesViewOperator.bl_idname, text = "View", depress = False, icon = "PLAY")
@@ -159,6 +186,9 @@ class UndoVerticesPanel(Panel, UndoVertices):
         row.scale_y = 1.5
         row.prop(prop, "is_view_point", text = "Point")
         row.prop(prop, "is_view_line", text = "Line")
+        row = box.row()
+        row.scale_y = 1.5
+        row.prop(prop, "is_modifier", text = "Modifiers when saved", icon = "MODIFIER")
 
 classes = (
     UndoVerticesPropertyGroup,

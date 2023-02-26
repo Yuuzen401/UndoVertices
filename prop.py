@@ -15,8 +15,8 @@ from bpy.types import PropertyGroup
 from bpy.props import IntProperty, FloatProperty, FloatVectorProperty, BoolProperty, PointerProperty, EnumProperty
 from .undo_vertices import UndoVertices
 
-def update_is_view(self, context):
-    UndoVertices.toggle_annotation_view()
+# def update_is_view(self, context):
+#     UndoVertices.toggle_annotation_view()
 
 class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     transform_method_enums = [
@@ -39,6 +39,8 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
         ("SELECT_DIFFERENCE", "", "SSELECT_DIFFERENCE", "SELECT_DIFFERENCE", 4),
     ]
 
+    # 完全に元に戻すか
+    is_undo : BoolProperty(name = "Completely Undo", default = False)
     # 変更方法
     transform_method : EnumProperty(items = transform_method_enums, name = "Method", default = "Constant")
     # 評価方法
@@ -56,6 +58,11 @@ class UndoVerticesPropertyGroup(PropertyGroup, UndoVertices):
     # 非表示の頂点を変更するか
     change_hide_vertices : BoolProperty(name = "Lock Hide", default = False)
     # 保存した頂点を描画するか
-    is_view : BoolProperty(name = "View", default = True)
-    is_view_line : BoolProperty(name = "View Line", default = False, update = update_is_view)
-    is_view_point : BoolProperty(name = "View Point", default = True, update = update_is_view)
+    # is_view : BoolProperty(name = "View", default = True)
+    is_view_line : BoolProperty(name = "View Line", default = False)
+    is_view_point : BoolProperty(name = "View Point", default = True)
+    # is_view_line : BoolProperty(name = "View Line", default = False, update = update_is_view)
+    # is_view_point : BoolProperty(name = "View Point", default = True, update = update_is_view)
+
+    # モディファイアの評価を有効にするか
+    is_modifier : BoolProperty(name = "Modifier", default = False)

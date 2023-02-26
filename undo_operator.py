@@ -44,19 +44,27 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
 
         # ---------------------------------------
         box = layout.box()
+        row = box.row()
+        row.scale_y = 2
+        row.prop(prop, "is_undo")
+
         row = box.row(align = True)
+        row.enabled = prop.is_undo != True
         row.label(text = "Lock Axis")
         row.scale_y = 2
         row.prop_enum(prop, "lock_axiz", "X")
         row.prop_enum(prop, "lock_axiz", "Y")
         row.prop_enum(prop, "lock_axiz", "Z")
+
         row = box.row()
+        row.enabled = prop.is_undo != True
         row.scale_y = 1.5
         row.prop(prop, 'change_hide_vertices', text = "Change hide vertices")
 
         # ---------------------------------------
         layout.separator()
         box = layout.box()
+        box.enabled = prop.is_undo != True
         row = box.row()
         row.scale_y = 2
         row.prop(prop, "transform_method")
@@ -64,6 +72,7 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
         layout.separator()
         if prop.transform_method == "Constant":
             box = layout.box()
+            box.enabled = prop.is_undo != True
             row = box.row()
             row.scale_y = 2
             row.prop(prop, "constant_rate", icon = "NOCURVE")
@@ -72,6 +81,7 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
             obj = context.active_object
             mod = obj.modifiers[self.modifier_name]
             box = layout.box()
+            box.enabled = prop.is_undo != True
             row = box.row()
             row.scale_y = 2
             row.prop(prop, "eval_method")
@@ -143,9 +153,9 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                         calc_rate = bezier_y[pos]
 
                         calc_co = get_coord_calc_two_point(save_co, now_co, calc_rate)
-                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
-                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
-                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
+                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz or prop.is_undo else calc_co[0]
+                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz or prop.is_undo else calc_co[1]
+                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz or prop.is_undo else calc_co[2]
 
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
@@ -165,9 +175,9 @@ class UndoVerticesUndoOperator(Operator, UndoVertices):
                         bm.verts[index].co.z = save_co[2]
                     else :
                         calc_co = get_coord_calc_two_point(save_co, now_co, prop.constant_rate / 100)
-                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz else calc_co[0]
-                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz else calc_co[1]
-                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz else calc_co[2]
+                        bm.verts[index].co.x = save_co[0] if "X" in prop.lock_axiz or prop.is_undo  else calc_co[0]
+                        bm.verts[index].co.y = save_co[1] if "Y" in prop.lock_axiz or prop.is_undo  else calc_co[1]
+                        bm.verts[index].co.z = save_co[2] if "Z" in prop.lock_axiz or prop.is_undo  else calc_co[2]
 
                     show_message_error_for_timeout(start_time, 3, "処理が長すぎるためキャンセルしました。Saveする頂点を減らしてみてください。")
 
