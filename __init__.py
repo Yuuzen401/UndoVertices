@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 16),
+    "version": (0, 0, 17),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -134,6 +134,7 @@ class UndoVerticesResetOperator(Operator, UndoVertices):
 
     def execute(self, context):
         UndoVertices.reset_save(context)
+        UndoVerticesUndoOperator.remove_working_temporary_modifier()
         return{"FINISHED"}
 
 class UndoVerticesPanel(Panel, UndoVertices):
