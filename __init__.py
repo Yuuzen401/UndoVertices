@@ -15,7 +15,7 @@ bl_info = {
     "name": "UndoVertices",
     "description": "undo the vertex",
     "author": "Yuuzen401",
-    "version": (0, 0, 17),
+    "version": (0, 0, 18),
     "blender": (2, 80, 0),
     "location":  "Mesh Edit > Sidebar > Undo Vertices",
     "warning": "",
@@ -137,7 +137,7 @@ class UndoVerticesResetOperator(Operator, UndoVertices):
         UndoVerticesUndoOperator.remove_working_temporary_modifier()
         return{"FINISHED"}
 
-class UndoVerticesPanel(Panel, UndoVertices):
+class VIEW3D_PT_UndoVerticesPanel(Panel, UndoVertices):
     bl_label = "Undo Vertices"
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -215,7 +215,7 @@ class UndoVerticesPanel(Panel, UndoVertices):
 
 classes = (
     UndoVerticesPropertyGroup,
-    UndoVerticesPanel,
+    VIEW3D_PT_UndoVerticesPanel,
     UndoVerticesSaveOperator,
     UndoVerticesSelectOperator,
     UndoVerticesResetOperator,

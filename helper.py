@@ -91,6 +91,13 @@ def get_avg_location(verts):
 
 def distance_3d(x1, y1, z1, x2, y2, z2):
     """3次元上での頂点と頂点の距離を求める
+    :param Float x1 始点のx
+    :param Float y1 始点のy
+    :param Float z1 始点のz
+    :param Float x2 終点のx
+    :param Float y2 終点のy
+    :param Float z2 終点のz
+    :return Float 距離
     """
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2 + (z2 - z1)**2)
 
